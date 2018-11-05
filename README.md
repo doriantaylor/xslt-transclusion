@@ -88,11 +88,11 @@ behaviour (e.g. SVG, MathML) will be to drop the document directly
 into the spot from which it was referred, replacing the referring
 element.
 
-In the case of HTML, however, we invariantly have to do surgery to the
-transcluded document in order to obtain a valid result. Namely, in all
-residual cases, we need to select the children of `<body>`. In so
-doing, we have to consider the context into which these elements are
-being transcluded. The content models of certain elements prohibit
+In the case of HTML, however, we invariably have to do surgery to the
+transcluded document in order to obtain a conforming result. Namely,
+in all residual cases, we need to select the children of `<body>`. In
+so doing, we have to consider the context into which these elements
+are being transcluded. The content models of certain elements prohibit
 certain descendants. In general we can leave this problem to the
 implementor, but in many cases we will still need to derive whether
 the containing element is _block_ or _inline_, and likewise the
