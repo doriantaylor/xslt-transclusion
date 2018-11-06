@@ -108,14 +108,28 @@ another element, then wrapping the transcluded content in a `<div>` or
 placed directly under the transcluding element's parent.
 
 ```xml
+<!-- in referring document -->
 <article>
   <script type="application/xhtml+xml" src="/content"/>
 </article>
+
+<!-- in transcluded document -->
+<body>
+  <p>lol hi i got transcluded</p>
+  <p>isn't life grand?</p>
+</body>
 ```
 
 This would replace the `<script>` with everything under the `<body>`
 of the transcluded document, directly under `<article>` in the
-transcluding document.
+transcluding document:
+
+```xml
+<article>
+  <p>lol hi i got transcluded</p>
+  <p>isn't life grand?</p>
+</article>
+```
 
 ### Single-Element Documents
 
