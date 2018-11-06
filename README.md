@@ -13,7 +13,7 @@ markup manipulation tasks.
 
 ## Rationale
 
-Transclusion is still a woefully underrepresented feature of the
+Transclusion is still a woefully underrepresented feature in
 World-Wide Web standards. Indeed there are many proprietary solutions
 on both the server and the client side, but none that enable the
 seamless welding of resources together, thus enabling their re-use.
@@ -55,7 +55,7 @@ The current climate of HTML is very clement to `<script>`. It can go
 pretty much anywhere and contain pretty much anything. If we give it
 certain attributes, we can make a pretty unambiguous statement:
 
-```html
+```xml
 <script type="application/xhtml+xml" src="transcluded.xhtml"/>
 ```
 
@@ -117,6 +117,16 @@ This would replace the `<script>` with everything under the `<body>`
 of the transcluded document, directly under `<article>` in the
 transcluding document.
 
+### Single-Element Documents
+
+When the `<body>` (or when present, `<main>`) of the transcluded HTML
+document only possesses a single child element (and no non-whitespace
+text nodes as children), and, assuming the parent of the transclusion
+reference admits it, that single child element can directly replace
+the transcluding element with no additional negotiation. Indeed, this
+condition should supersede the behaviour described in the previous
+section.
+
 ### Other Vagaries of HTML 5
 
 The introduction of the various sectioning elements in HTML5, in
@@ -126,7 +136,11 @@ transclusion task.
 For instance, it would be inappropriate to transclude the part of a
 document above `<main>`, especially if the referring document had a
 `<main>` of its own (`<main>` cannot appear under another `<main>`,
-and there can only be one `<main>` that is not `hidden`).
+and there can only be one `<main>` that is not `hidden`). Therefore,
+when present, transclusion should begin beneath the first visible
+`<main>` element in the transcluded document. This will also make it
+easier for transcluded resources to do double duty as standalone
+documents.
 
 The presence of `<article>`, irrespective of the presence of `<main>`,
 is intended to denote a discrete body of text. It is not clear at this
@@ -174,8 +188,8 @@ implementor to make sure this condition remains satisfied.
 Template authors will have to manually propagate the `$resource-path`
 parameter through their work. Moreover, resource authors will have to
 take into account the potential for acyclical, yet unsustainably long
-transclusion paths. Parametric resources may also fall into this
-category.
+transclusion paths. Parametric resources (i.e., those which can vary
+by URI query parameters) may also fall into this category.
 
 ### Links, Fragments, and IDs
 
