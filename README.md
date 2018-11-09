@@ -23,6 +23,14 @@ featured transclusion everywhere, HTML5 is considerably more
 apprehensive. Aside from a provisional `<iframe seamless>` which was
 eventually removed, the specification is silent on the subject.
 
+## Targets
+
+* Design patterns in XSLT 1.0 for performing reliable transclusions
+  within the scope of a given website,
+* XSLT 1.0 library encapsulating those patterns which can be encapsulated,
+* Design patterns in (X)HTML5 conducive to straightforward,
+  uncomplicated transclusion and content reuse.
+
 ## Desiderata
 
 For a transclusion reference, we want an element which is legal
@@ -131,6 +139,15 @@ transcluding document:
 </article>
 ```
 
+To summarize:
+
+* _Either_ the `<body>` (or `<main>`) of the transcluded document is
+  replaced by a suitable element in the referring document,
+  * (The replacement element _could_ be the parent of the special
+    `<script>` element _if_ the latter had no siblings other than
+    whitespace)
+* _Or_ the transclusion content _is_ itself a single element.
+
 ### Single-Element Documents
 
 When the `<body>` (or when present, `<main>`) of the transcluded HTML
@@ -207,14 +224,81 @@ by URI query parameters) may also fall into this category.
 
 ### Links, Fragments, and IDs
 
-**TODO**
+Links to transcluded documents should be rewritten into fragments of
+the topmost document. This will entail coming up with both a way to
+prefetch the transcluded documents, and a method of generating
+identifiers which match the
+[NCName](https://www.w3.org/TR/xml-names/#NT-NCName) grammar _and_ are
+guaranteed to be unique at the level of the site. (Browser
+implementations have historically not permitted XSLT 1.0
+requests—including subrequests—to cross origins; this may be different
+now with [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).)
+
+> See [`uuid-ncname`](https://www.rubydoc.info/gems/uuid-ncname) for a
+> candidate. For now we will assume that all `id` attributes are
+> unique across the entire site.
+
+Transclusion references to URI fragments should select the element
+bearing the `id` that matches the fragment (the content after the
+`#`). This mode of operation should supersede all other behaviour
+described above, unless there is no such `id`, in which case the
+template should behave as normal (but perhaps signal a warning).
 
 ## Procedure
 
+* Set the base (`$base`) to the content of `<base href="..."/>`,
+  assuming it is the same as the request-URI.
+* Set the resource path (`$resource-path`) to the same value as the base.
 * Pre-fetch all documents to be transcluded and produce a list of
-  URIs; this will be used for link rewriting
-  
+  URIs; this will be used for link rewriting (`$rewrite`).
+* set `$main` to `boolean(ancestor-or-self::html:main)`.
+* Set the initial heading (`$heading`) level to **0**.
+* Traverse the document as normal, ensuring the aforementioned
+  parameters are conveyed through each template:
+  * If the processor encounters a `<section>`, increment `$heading`.
+  * If the processor encounters an `<h1>` through `<h6>` element,
+    extract the integer from the element name and increment it by
+    `$heading` (clipping at **6**), then use the resulting number to
+    generate a new heading element.
+  * If the processor encounters an `<a>` or `<area>`, rewrite `href`.
+  * If the processor encounters a `<script>` (or other designated
+    element) with an `src` attribute and a `type` attribute containing
+    the string `xml`, perform the transclusion process.
+
+### Transclusion Process
+
+In addition to the parameters already described, transclusion will also need:
+
+* `$uri` which is the content of e.g. the `src` attribute of the
+  appropriate `<script>` element, turned into an absolute URI
+* `$caller` which is the element containing the `src` attribute
+
+> No-ops may optionally issue warnings. It would be useful to create a
+> mechanism such that users of the library can override the no-op
+> behaviour.
+
+* Resolve the assumed-to-be relative URI in the `src` attribute
+* Separate the fragment if it exists
+* If the document (i.e. sans-fragment) URI is contained in
+  `$resource-path`, treat this element as a no-op
+* Add the document URI to `$resource-path`
+* Dereference the document URI using `document()`
+* If the dereference fails to produce an element tree, this is a no-op
+* Set `$base` to the content of `<base href="..."/>`
+* If the `$base` of the newly-dereferenced document is different from
+  the document URI, check it against `$resource-path`, bailing out
+  once again with a no-op if it is present.
+  * Otherwise, add the new `$base` to `$resource-path`.
+* If `$uri` has a fragment, locate the element with the matching `id`.
+  * If no such element is found, continue as if `$uri` had no fragment.
+
 **TODO**
+
+### Rewriting `href`
+
+**TODO**
+
+* The first URI in `$resource-path` is always the topmost document.
 
 ## Contributing
 
