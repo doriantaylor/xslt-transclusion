@@ -5,22 +5,68 @@
     xmlns:html="http://www.w3.org/1999/xhtml"
     xmlns:str="http://xsltsl.org/string"
     xmlns:uri="http://xsltsl.org/uri"
-    exclude-result-prefixes="html str uri">
+    xmlns:xc="https://makethingsmakesense.com/asset/transclude#"
+    exclude-result-prefixes="html str uri xc">
 
 <!-- XXX just embed this eventually -->
 <xsl:import href="xsltsl-extension.xsl"/>
 
-<xsl:key name="id" match="*" use="normalize-space(@id)"/>
-<xsl:key name="blocks" match="html:body|html:main[not(@hidden)]|html:article[not(ancestor::html:main[@hidden])]" use="''"/>
-<xsl:key name="references" match="html:*[@src][contains(transform(@type, 'LMX',  'lmx'), 'xml')]" use="''"/>
+<xsl:key name="xc:id" match="*" use="normalize-space(@id)"/>
+<xsl:key name="xc:blocks" match="html:body|html:main[not(@hidden)]|html:article[not(ancestor::html:main[@hidden])]" use="''"/>
+<xsl:key name="xc:references" match="html:*[@src][contains(transform(@type, 'XML',  'xml'), 'xml')]" use="''"/>
+
+<!-- these are cribbed from rdfa.xsl -->
+<xsl:variable name="xc:RECORD-SEP" select="'&#xf11e;'"/>
+<xsl:variable name="xc:UNIT-SEP"   select="'&#xf11f;'"/>
+
+<xsl:template match="html:*" mode="xc:get-rewrites">
+  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
+  <xsl:param name="references" select="key('xc:references', '')"/>
+  <xsl:param name="result" select="''"/>
+  <!-- note the only way to do this in one template is to go depth first -->
+  <xsl:choose>
+    <xsl:when test="count($references)">
+    <!-- resolve the uri of the first reference -->
+    <xsl:variable name="src">
+      <xsl:call-template name="uri:resolve-uri">
+        <xsl:with-param name="uri" select="$references[1]/@src"/>
+        <xsl:with-param name="base" select="$base"/>
+      </xsl:call-template>
+    </xsl:variable>
+
+    <!-- if the new uri is not present in the list then dereference it -->
+
+
+    <!-- run this template recursively over the root of the
+         dereferenced document and capture its output -->
+    <xsl:variable name="new-result">
+      <xsl:apply-templates select="document($src)/*" mode="xc:get-rewrites">
+        <xsl:with-param name="result" select="concat($result, ' ', $src)"/>
+      </xsl:apply-templates>
+    </xsl:variable>
+
+    <!-- now we move to the next reference in this document-->
+    <!-- this is just an optimization to keep from recursing unnecessarily -->
+    <xsl:if test="count($references) &gt; 1">
+      <xsl:apply-templates select="." mode="xc:get-rewrites">
+        <xsl:with-param name="base" select="$base"/>
+        <xsl:with-param name="references" select="$references[position() &gt; 1]"/>
+      </xsl:apply-templates>
+    </xsl:if>
+  </xsl:when>
+  <xsl:otherwise>
+    <xsl:value-of select="$result"/>
+  </xsl:otherwise>
+  </xsl:choose>
+
+</xsl:template>
 
 <!-- this performs the transclusion -->
 
 <xsl:template match="html:script[@src][contains(@type, 'xml')]">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
-  <xsl:param name="caller" select=".."/>
-  <xsl:param name="heading" select="false()"/>
+  <xsl:param name="heading" select="0"/>
 
   <xsl:variable name="src">
     <xsl:call-template name="uri:resolve-uri">
@@ -40,25 +86,25 @@
 
   <xsl:choose>
     <xsl:when test="contains(concat(' ', $resource-path, ' '), concat(' ', $resource, ' '))">
-      <xsl:comment>Transclusion cycle detected and halted.</xsl:comment>
-      <xsl:call-template name="html-no-op">
+      <xsl:comment>Cycle detected in transclusion path and halted.</xsl:comment>
+      <xsl:call-template name="xc:html-no-op">
         <xsl:with-param name="base" select="$base"/>
         <xsl:with-param name="resource-path" select="$resource-path"/>
       </xsl:call-template>
     </xsl:when>
     <xsl:otherwise>
       <xsl:message><xsl:value-of select="$resource"/></xsl:message>
-      <xsl:apply-templates select="document($resource)/*" mode="transclude">
+      <xsl:apply-templates select="document($resource)/*" mode="xc:transclude">
         <xsl:with-param name="resource-path" select="concat($resource-path, ' ', $resource)"/>
         <xsl:with-param name="uri"    select="$src"/>
-        <xsl:with-param name="caller" select="$caller"/>
+        <xsl:with-param name="caller" select="."/>
       </xsl:apply-templates>
     </xsl:otherwise>
   </xsl:choose>
 
 </xsl:template>
 
-<xsl:template match="html:*" mode="transclude">
+<xsl:template match="html:*" mode="xc:transclude">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path"/>
   <xsl:param name="uri" select="$base"/>
@@ -79,7 +125,7 @@
   </xsl:if>
 </xsl:template>
 
-<xsl:template match="*" mode="transclude">
+<xsl:template match="*" mode="xc:transclude">
   <xsl:message>huh</xsl:message>
   <xsl:apply-templates select=".">
     <xsl:with-param name="base" select="$base"/>
@@ -117,35 +163,49 @@
 
 <!-- fix h1 through h6 -->
 
-<xsl:template match="html:h1|html:h2|html:h3|html:h4|html:h5|html:h6" name="heading">
-  <xsl:param name="base" select="normalize-space((/html:html/html:head/html:base[@href])[1]/@href)"/>
+<xsl:template match="html:h1|html:h2|html:h3|html:h4|html:h5|html:h6" name="xc:heading">
+  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
-  <xsl:param name="level" select="string-length(normalize-space($resource-path)) - string-length(translate(normalize-space($resource-path), ' ', ''))"/>
+  <xsl:param name="rewrite" select="''"/>
+  <xsl:param name="main"    select="false()"/>
+  <xsl:param name="heading" select="0"/>
+
   <xsl:variable name="rank" select="number(substring-after(local-name(), 'h'))"/>
+
+  <!-- okay this is clever -->
+  <xsl:variable name="initial" select="number(not(not(ancestor::html:main))) * count(ancestor::html:section[ancestor::html:main]) + number(not(ancestor::html:main)) * count(ancestor::html:section)"/>
+
   <xsl:variable name="element">
+    <xsl:variable name="_" select="$rank - $initial + $aheading"/>
     <xsl:choose>
-      <xsl:when test="($rank + $level) &lt;= 6">
-        <xsl:value-of select="concat('h', $rank + $level)"/>
-      </xsl:when>
-      <xsl:otherwise><xsl:value-of select="'h6'"/></xsl:otherwise>
+      <xsl:when test="$_ &lt; 1">h1</xsl:when>
+      <xsl:when test="$_ &gt; 6">h6</xsl:when>
+      <xsl:otherwise><xsl:value-of select="concat('h', $_)"/></xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
+
   <xsl:element name="{$element}">
     <xsl:for-each select="@*">
       <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
     </xsl:for-each>
     <xsl:apply-templates>
-      <xsl:with-param name="base" select="$base"/>
+      <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+      <xsl:with-param name="main"          select="$main"/>
+      <xsl:with-param name="heading"       select="$heading + 1"/>
     </xsl:apply-templates>
   </xsl:element>
 </xsl:template>
 
 <!-- catch-all template for propagating state variables -->
 
-<xsl:template match="html:*" name="html-no-op">
+<xsl:template match="html:*" name="xc:html-no-op">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
+  <xsl:param name="rewrite" select="''"/>
+  <xsl:param name="main"    select="false()"/>
+  <xsl:param name="heading" select="0"/>
   <xsl:param name="element" select="name()"/>
 
   <xsl:element name="{$element}" namespace="{namespace-uri()}">

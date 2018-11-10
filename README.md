@@ -246,11 +246,25 @@ template should behave as normal (but perhaps signal a warning).
 
 ## Procedure
 
-* Set the base (`$base`) to the content of `<base href="..."/>`,
-  assuming it is the same as the request-URI.
-* Set the resource path (`$resource-path`) to the same value as the base.
-* Pre-fetch all documents to be transcluded and produce a list of
-  URIs; this will be used for link rewriting (`$rewrite`).
+The following parameters must be present in every template:
+
+* `$base`, which is the normalized content of `<base href="..."/>`.
+* `$resource-path`, which is a space-separated list of URIs that gets
+  added to with every transclusion, beginning with `$base`.
+* `$rewrite`, another space-separated list of URIs similar to
+  `$resource-path`, though collected all at once. Represents the set
+  of (transcluded) URIs to be rewritten into fragment identifiers, and
+  should therefore _not_ contain `$base`.
+* `$main`, a flag indicating the current node in the result tree is
+  beneath a `<main>` element.
+* `$heading`, a non-negative integer, denoting the adjustment to the
+  heading level.
+  
+Now for the main procedure:
+
+* Set `$base` to `normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)`.
+* Set `$resource-path` to the same value as `$base`.
+* Set `$rewrite` to the list of all URIs to be transcluded.
 * set `$main` to `boolean(ancestor-or-self::html:main)`.
 * Set the initial heading (`$heading`) level to **0**.
 * Traverse the document as normal, ensuring the aforementioned
@@ -270,27 +284,43 @@ template should behave as normal (but perhaps signal a warning).
 In addition to the parameters already described, transclusion will also need:
 
 * `$uri` which is the content of e.g. the `src` attribute of the
-  appropriate `<script>` element, turned into an absolute URI
-* `$caller` which is the element containing the `src` attribute
+  appropriate `<script>` element, turned into an absolute URI.
+* `$caller` which is the element in the referring document which
+  contains the `src` attribute we followed.
 
 > No-ops may optionally issue warnings. It would be useful to create a
 > mechanism such that users of the library can override the no-op
 > behaviour.
 
-* Resolve the assumed-to-be relative URI in the `src` attribute
-* Separate the fragment if it exists
+* Resolve the assumed-to-be relative URI in the `src` attribute.
+* Separate the fragment if it exists.
 * If the document (i.e. sans-fragment) URI is contained in
-  `$resource-path`, treat this element as a no-op
-* Add the document URI to `$resource-path`
-* Dereference the document URI using `document()`
+  `$resource-path`, treat this element as a no-op.
+* Add the document URI to `$resource-path`.
+* Dereference the document URI using `document()`.
 * If the dereference fails to produce an element tree, this is a no-op
-* Set `$base` to the content of `<base href="..."/>`
+* Set `$base` to the content of `<base href="..."/>`.
 * If the `$base` of the newly-dereferenced document is different from
   the document URI, check it against `$resource-path`, bailing out
-  once again with a no-op if it is present.
+  once again with a no-op if there is a match.
   * Otherwise, add the new `$base` to `$resource-path`.
 * If `$uri` has a fragment, locate the element with the matching `id`.
+  * If an element is found, continue as if this is a single-element document.
   * If no such element is found, continue as if `$uri` had no fragment.
+* If the document has a `<main>` element, select it as our new root.
+  * Otherwise, select `<body>`.
+* We generate an enclosing element if and only if:
+  * there are multiple child nodes under the new root **AND**
+  * `$caller` has sibling nodes other than whitespace/comments/PIs **OR**
+* Determine what the new enclosing element will be (or whether there
+  will be one):
+  * If the new root has multiple 
+* If `$caller` has a parent element
+* If `$caller`'s parent element is a `<section>`:
+  * If there is no existing header element immediately under the root,
+  generate an `<h?>` (1 + `$heading`) element and populate it with the
+  contents of `<title>`.
+
 
 **TODO**
 
