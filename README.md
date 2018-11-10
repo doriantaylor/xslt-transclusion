@@ -15,8 +15,9 @@ markup manipulation tasks.
 
 Transclusion is still a woefully underrepresented feature in
 World-Wide Web standards. Indeed there are many proprietary solutions
-on both the server and the client side, but none that enable the
-seamless welding of resources together, thus enabling their re-use.
+on both the server and the client side, but no _standards_ that enable
+the seamless welding of resources together, thus enabling their
+re-use.
 
 While the now-defunct [XHTML2](https://www.w3.org/TR/xhtml2/) standard
 featured transclusion everywhere, HTML5 is considerably more
