@@ -3,10 +3,12 @@
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns="http://www.w3.org/1999/xhtml"
     xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     xmlns:str="http://xsltsl.org/string"
     xmlns:uri="http://xsltsl.org/uri"
     xmlns:xc="https://makethingsmakesense.com/asset/transclude#"
-    exclude-result-prefixes="html str uri xc">
+    exclude-result-prefixes="html str uri rdf xlink xc">
 
 <!-- XXX just embed this eventually -->
 <xsl:import href="xsltsl-extension.xsl"/>
@@ -59,9 +61,11 @@
   <xsl:param name="heading" select="0"/>
 
 <html>
-  <xsl:for-each select="@*">
-    <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-  </xsl:for-each>
+  <xsl:apply-templates select="@*">
+    <xsl:with-param name="base"          select="$base"/>
+    <xsl:with-param name="resource-path" select="$resource-path"/>
+    <xsl:with-param name="rewrite"       select="$rewrite"/>
+  </xsl:apply-templates>
   <xsl:apply-templates>
     <xsl:with-param name="base" select="$base"/>
     <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -234,16 +238,21 @@
     <xsl:when test="count($parent/*) = 1">
       <!-- we unconditionally replace the parent node because it's been skipped -->
       <xsl:element name="{name($parent)}" namespace="{namespace-uri($parent)}">
-        <xsl:for-each select="$parent/@*">
-          <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-        </xsl:for-each>
+        <xsl:apply-templates select="$parent/@*">
+          <xsl:with-param name="base"          select="$base"/>
+          <xsl:with-param name="resource-path" select="$resource-path"/>
+          <xsl:with-param name="rewrite"       select="$rewrite"/>
+        </xsl:apply-templates>
 
         <xsl:choose>
           <xsl:when test="$document != $base and contains(concat(' ', $resource-path, ' '), concat(' ', $base, ' '))">
             <xsl:element name="{name($caller)}" namespace="{namespace-uri($caller)}">
-              <xsl:for-each select="$caller/@*">
-                <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-              </xsl:for-each>
+              <xsl:apply-templates select="$caller/@*">
+                <xsl:with-param name="base"          select="$base"/>
+                <xsl:with-param name="resource-path" select="$resource-path"/>
+                <xsl:with-param name="rewrite"       select="$rewrite"/>
+              </xsl:apply-templates>
+
               <xsl:apply-templates select="$caller/node()">
                 <xsl:with-param name="base"          select="$base"/>
                 <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -431,9 +440,12 @@
   </xsl:if>
 
   <main>
-    <xsl:for-each select="@*">
-      <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-    </xsl:for-each>
+    <xsl:apply-templates select="@*">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
+
     <xsl:apply-templates>
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -454,9 +466,12 @@
   <xsl:param name="heading" select="0"/>
 
   <section>
-    <xsl:for-each select="@*">
-      <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-    </xsl:for-each>
+    <xsl:apply-templates select="@*">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
+
     <xsl:apply-templates>
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -491,9 +506,12 @@
   </xsl:variable>
 
   <xsl:element name="{$element}">
-    <xsl:for-each select="@*">
-      <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-    </xsl:for-each>
+    <xsl:apply-templates select="@*">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
+
     <xsl:apply-templates>
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -515,9 +533,11 @@
   <xsl:param name="element" select="name()"/>
 
   <xsl:element name="{$element}">
-    <xsl:for-each select="@*">
-      <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-    </xsl:for-each>
+    <xsl:apply-templates select="@*">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
     <xsl:apply-templates>
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -526,6 +546,41 @@
       <xsl:with-param name="heading"       select="$heading"/>
     </xsl:apply-templates>
   </xsl:element>
+</xsl:template>
+
+<xsl:template match="@*">
+  <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
+    <xsl:value-of select="."/>
+  </xsl:attribute>
+</xsl:template>
+
+<xsl:template match="@href|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource">
+  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
+  <xsl:param name="resource-path" select="$base"/>
+  <xsl:param name="rewrite" select="''"/>
+
+  <xsl:variable name="origin">
+    <xsl:choose>
+      <xsl:when test="contains(normalize-space($resource-path), ' ')">
+        <xsl:value-of select="substring-before(normalize-space($resource-path), ' ')"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="normalize-space($resource-path)"/>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
+  <xsl:variable name="uri">
+    <xsl:call-template name="uri:resolve-uri">
+      <xsl:with-param name="uri" select="normalize-space(.)"/>
+      <xsl:with-param name="base" select="$base"/>
+    </xsl:call-template>
+  </xsl:variable>
+
+  <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
+    <xsl:value-of select="$uri"/>
+  </xsl:attribute>
+
 </xsl:template>
 
 <!-- all non-html -->
