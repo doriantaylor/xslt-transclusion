@@ -242,9 +242,13 @@
         <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
 
         <xsl:if test="$parent[self::html:section] and $title">
+          <xsl:text>
+</xsl:text>
           <xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
             <xsl:apply-templates select="$title/node()"/>
           </xsl:element>
+          <xsl:text>
+</xsl:text>
         </xsl:if>
 
         <!-- this never needs a wrapper element; $parent suffices -->
