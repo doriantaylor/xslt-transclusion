@@ -554,7 +554,7 @@
   </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@href|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource">
+<xsl:template match="@href[not(parent::html:base)]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="''"/>
