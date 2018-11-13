@@ -231,20 +231,6 @@
   <xsl:variable name="to-transclude" select="((key('xc:blocks', '')[self::html:body|self::html:main][last()])[1]|key('xc:id', $fragment))[last()]"/>
 
   <xsl:choose>
-    <xsl:when test="$document != $base and contains(concat(' ', $resource-path, ' '), concat(' ', $base, ' '))">
-      <xsl:element name="{name($caller)}" namespace="{namespace-uri($caller)}">
-        <xsl:for-each select="$caller/@*">
-          <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-        </xsl:for-each>
-        <xsl:apply-templates select="$caller/node()">
-          <xsl:with-param name="base"          select="$base"/>
-          <xsl:with-param name="resource-path" select="$resource-path"/>
-          <xsl:with-param name="rewrite"       select="$rewrite"/>
-          <xsl:with-param name="main"          select="$main"/>
-          <xsl:with-param name="heading"       select="$heading"/>
-        </xsl:apply-templates>
-      </xsl:element>
-    </xsl:when>
     <xsl:when test="count($parent/*) = 1">
       <!-- we unconditionally replace the parent node because it's been skipped -->
       <xsl:element name="{name($parent)}" namespace="{namespace-uri($parent)}">
@@ -252,28 +238,46 @@
           <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
         </xsl:for-each>
 
-        <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
+        <xsl:choose>
+          <xsl:when test="$document != $base and contains(concat(' ', $resource-path, ' '), concat(' ', $base, ' '))">
+            <xsl:element name="{name($caller)}" namespace="{namespace-uri($caller)}">
+              <xsl:for-each select="$caller/@*">
+                <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
+              </xsl:for-each>
+              <xsl:apply-templates select="$caller/node()">
+                <xsl:with-param name="base"          select="$base"/>
+                <xsl:with-param name="resource-path" select="$resource-path"/>
+                <xsl:with-param name="rewrite"       select="$rewrite"/>
+                <xsl:with-param name="main"          select="$main"/>
+                <xsl:with-param name="heading"       select="$heading"/>
+              </xsl:apply-templates>
+            </xsl:element>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
 
-        <xsl:if test="$title and local-name($parent) = 'section'">
-          <xsl:text>
+            <xsl:if test="$title and local-name($parent) = 'section'">
+              <xsl:text>
 </xsl:text>
-          <xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
-            <xsl:apply-templates select="$title/node()"/>
-          </xsl:element>
-          <xsl:text>
+<xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
+  <xsl:apply-templates select="$title/node()"/>
+</xsl:element>
+<xsl:text>
 </xsl:text>
-        </xsl:if>
+            </xsl:if>
 
-        <!-- this never needs a wrapper element; $parent suffices -->
-        <xsl:apply-templates select="$to-transclude" mode="xc:maybe-wrap">
-          <xsl:with-param name="base"          select="$base"/>
-          <xsl:with-param name="resource-path" select="$resource-path"/>
-          <xsl:with-param name="rewrite"       select="$rewrite"/>
-          <xsl:with-param name="main"          select="$main"/>
-          <xsl:with-param name="heading"       select="$heading"/>
-          <xsl:with-param name="uri"           select="$uri"/>
-          <xsl:with-param name="caller"        select="$caller"/>
-        </xsl:apply-templates>
+            <!-- this never needs a wrapper element; $parent suffices -->
+            <xsl:apply-templates select="$to-transclude" mode="xc:maybe-wrap">
+              <xsl:with-param name="base"          select="$base"/>
+              <xsl:with-param name="resource-path" select="$resource-path"/>
+              <xsl:with-param name="rewrite"       select="$rewrite"/>
+              <xsl:with-param name="main"          select="$main"/>
+              <xsl:with-param name="heading"       select="$heading"/>
+              <xsl:with-param name="uri"           select="$uri"/>
+              <xsl:with-param name="caller"        select="$caller"/>
+            </xsl:apply-templates>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:element>
     </xsl:when>
     <xsl:otherwise>
