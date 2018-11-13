@@ -201,7 +201,6 @@
 
   <xsl:variable name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
 
-
   <xsl:if test="normalize-space($uri) = ''">
     <xsl:message terminate="yes">URI must be explicitly defined in transclusions.</xsl:message>
   </xsl:if>
@@ -232,16 +231,30 @@
   <xsl:variable name="to-transclude" select="((key('xc:blocks', '')[self::html:body|self::html:main][last()])[1]|key('xc:id', $fragment))[last()]"/>
 
   <xsl:choose>
+    <xsl:when test="$document != $base and contains(concat(' ', $resource-path, ' '), concat(' ', $base, ' '))">
+      <xsl:element name="{name($caller)}" namespace="{namespace-uri($caller)}">
+        <xsl:for-each select="$caller/@*">
+          <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
+        </xsl:for-each>
+        <xsl:apply-templates select="$caller/node()">
+          <xsl:with-param name="base"          select="$base"/>
+          <xsl:with-param name="resource-path" select="$resource-path"/>
+          <xsl:with-param name="rewrite"       select="$rewrite"/>
+          <xsl:with-param name="main"          select="$main"/>
+          <xsl:with-param name="heading"       select="$heading"/>
+        </xsl:apply-templates>
+      </xsl:element>
+    </xsl:when>
     <xsl:when test="count($parent/*) = 1">
       <!-- we unconditionally replace the parent node because it's been skipped -->
       <xsl:element name="{name($parent)}" namespace="{namespace-uri($parent)}">
-        <xsl:for-each select="@*">
+        <xsl:for-each select="$parent/@*">
           <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
         </xsl:for-each>
 
         <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
 
-        <xsl:if test="$parent[self::html:section] and $title">
+        <xsl:if test="$title and local-name($parent) = 'section'">
           <xsl:text>
 </xsl:text>
           <xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
@@ -262,8 +275,6 @@
           <xsl:with-param name="caller"        select="$caller"/>
         </xsl:apply-templates>
       </xsl:element>
-    </xsl:when>
-    <xsl:when test="count($to-transclude/*|$to-transclude/text()[normalize-space(.) != '']) != 1">
     </xsl:when>
     <xsl:otherwise>
 
@@ -360,11 +371,24 @@
     only child.
 -->
 
+
 <xsl:template match="html:*[not(self::html:script)][html:script[@src][contains(@type, 'xml')]][count(*) = 1][normalize-space(text()) = '']">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
 
+  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
+  <xsl:param name="resource-path" select="$base"/>
+  <xsl:param name="rewrite" select="''"/>
+  <xsl:param name="main"    select="false()"/>
+  <xsl:param name="heading" select="0"/>
 
+  <xsl:apply-templates select="html:script">
+    <xsl:with-param name="base" select="$base"/>
+    <xsl:with-param name="resource-path" select="$resource-path"/>
+    <xsl:with-param name="rewrite"       select="$rewrite"/>
+    <xsl:with-param name="main"          select="$main"/>
+    <xsl:with-param name="heading"       select="$heading"/>
+  </xsl:apply-templates>
 </xsl:template>
 
 <!--
