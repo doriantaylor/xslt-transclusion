@@ -10,6 +10,9 @@
 
 <xsl:import href="xsltsl.xsl"/>
 
+<xsl:variable name="str:RECORD-SEP" select="'&#xf11e;'"/>
+<xsl:variable name="str:UNIT-SEP"   select="'&#xf11f;'"/>
+
 <xsl:template name="uri:sanitize-path">
   <xsl:param name="path" select="''"/>
 
@@ -498,7 +501,7 @@
 
 <xsl:template name="str:unique-strings">
   <xsl:param name="string" select="''"/>
-  <xsl:param name="delimiter" select="$rdfa:RECORD-SEP"/>
+  <xsl:param name="delimiter" select="$str:RECORD-SEP"/>
 
   <xsl:choose>
     <xsl:when test="contains($string, $delimiter)">

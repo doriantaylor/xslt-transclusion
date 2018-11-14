@@ -46,7 +46,12 @@
   <xc:block name="figcaption"/>
   <xc:block name="main"/>
   <xc:block name="div"/>
-  <xc:block name="div"/>
+  <xc:block name="caption"/>
+  <xc:block name="td"/>
+  <xc:block name="th"/>
+  <xc:block name="form"/>
+  <xc:block name="fieldset"/>
+  <xc:block name="template"/>
 </xc:elements>
 
 <xsl:template match="html:html">
@@ -61,7 +66,7 @@
   <xsl:param name="heading" select="0"/>
 
 <html>
-  <xsl:apply-templates select="@*">
+  <xsl:apply-templates select="@*" mode="xc:attribute">
     <xsl:with-param name="base"          select="$base"/>
     <xsl:with-param name="resource-path" select="$resource-path"/>
     <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -230,7 +235,7 @@
   <xsl:variable name="parent" select="$caller/parent::*"/>
   <!--<xsl:variable name="solo"   select="count($parent/*) = 1"/>-->
 
-  <xsl:message><xsl:value-of select="key('xc:id', $fragment)"/></xsl:message>
+  <!--<xsl:message><xsl:value-of select="key('xc:id', $fragment)"/></xsl:message>-->
 
   <xsl:variable name="to-transclude" select="((key('xc:blocks', '')[self::html:body|self::html:main][last()])[1]|key('xc:id', $fragment))[last()]"/>
 
@@ -238,7 +243,7 @@
     <xsl:when test="count($parent/*) = 1">
       <!-- we unconditionally replace the parent node because it's been skipped -->
       <xsl:element name="{name($parent)}" namespace="{namespace-uri($parent)}">
-        <xsl:apply-templates select="$parent/@*">
+        <xsl:apply-templates select="$parent/@*" mode="xc:attribute">
           <xsl:with-param name="base"          select="$base"/>
           <xsl:with-param name="resource-path" select="$resource-path"/>
           <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -246,8 +251,9 @@
 
         <xsl:choose>
           <xsl:when test="$document != $base and contains(concat(' ', $resource-path, ' '), concat(' ', $base, ' '))">
+            <xsl:comment>Cycle detected in transclusion path and halted.</xsl:comment>
             <xsl:element name="{name($caller)}" namespace="{namespace-uri($caller)}">
-              <xsl:apply-templates select="$caller/@*">
+              <xsl:apply-templates select="$caller/@*" mode="xc:attribute">
                 <xsl:with-param name="base"          select="$base"/>
                 <xsl:with-param name="resource-path" select="$resource-path"/>
                 <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -269,7 +275,7 @@
               <xsl:text>
 </xsl:text>
 <xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
-  <xsl:apply-templates select="$title/node()"/>
+  <xsl:value-of select="normalize-space($title)"/>
 </xsl:element>
 <xsl:text>
 </xsl:text>
@@ -388,9 +394,6 @@
 <xsl:template match="html:*[not(self::html:script)][html:script[@src][contains(@type, 'xml')]][count(*) = 1][normalize-space(text()) = '']">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
-
-  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
-  <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="''"/>
   <xsl:param name="main"    select="false()"/>
   <xsl:param name="heading" select="0"/>
@@ -440,7 +443,7 @@
   </xsl:if>
 
   <main>
-    <xsl:apply-templates select="@*">
+    <xsl:apply-templates select="@*" mode="xc:attribute">
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
       <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -466,7 +469,7 @@
   <xsl:param name="heading" select="0"/>
 
   <section>
-    <xsl:apply-templates select="@*">
+    <xsl:apply-templates select="@*" mode="xc:attribute">
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
       <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -506,7 +509,7 @@
   </xsl:variable>
 
   <xsl:element name="{$element}">
-    <xsl:apply-templates select="@*">
+    <xsl:apply-templates select="@*" mode="xc:attribute">
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
       <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -533,7 +536,7 @@
   <xsl:param name="element" select="name()"/>
 
   <xsl:element name="{$element}">
-    <xsl:apply-templates select="@*">
+    <xsl:apply-templates select="@*" mode="xc:attribute">
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
       <xsl:with-param name="rewrite"       select="$rewrite"/>
@@ -548,13 +551,13 @@
   </xsl:element>
 </xsl:template>
 
-<xsl:template match="@*">
+<xsl:template match="@*" mode="xc:attribute">
   <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
     <xsl:value-of select="."/>
   </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@href[not(parent::html:base)]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource">
+<xsl:template match="@href[not(parent::html:base)]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource" mode="xc:attribute">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="''"/>
@@ -593,9 +596,12 @@
   <xsl:param name="heading"       select="0"/>
 
   <xsl:element name="{name()}" namespace="{namespace-uri()}">
-    <xsl:for-each select="@*">
-      <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
-    </xsl:for-each>
+    <xsl:apply-templates select="@*" mode="xc:attribute">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
+
     <xsl:apply-templates>
       <xsl:with-param name="base"          select="$base"/>
       <xsl:with-param name="resource-path" select="$resource-path"/>
