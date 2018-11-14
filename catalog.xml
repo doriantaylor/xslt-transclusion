@@ -3,4 +3,5 @@
   "file:///usr/share/xml/schema/xml-core/catalog.dtd">
 <catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
   <rewriteURI uriStartString="https://makethingsmakesense.com/test/" rewritePrefix="./"/>
+  <uri name="/asset/transclude" uri="./transclude.xsl"/>
 </catalog>
