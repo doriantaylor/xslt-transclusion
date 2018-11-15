@@ -233,9 +233,6 @@
   </xsl:variable>
 
   <xsl:variable name="parent" select="$caller/parent::*"/>
-  <!--<xsl:variable name="solo"   select="count($parent/*) = 1"/>-->
-
-  <!--<xsl:message><xsl:value-of select="key('xc:id', $fragment)"/></xsl:message>-->
 
   <xsl:variable name="to-transclude" select="((key('xc:blocks', '')[self::html:body|self::html:main][last()])[1]|key('xc:id', $fragment))[last()]"/>
 
@@ -374,8 +371,6 @@
   <xsl:param name="main"          select="false()"/>
   <xsl:param name="heading"       select="0"/>
 
-  <xsl:message>huh</xsl:message>
-
   <xsl:apply-templates select=".">
     <xsl:with-param name="base"          select="$base"/>
     <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -389,7 +384,6 @@
     match any html element that contains a single script src as an
     only child.
 -->
-
 
 <xsl:template match="html:*[not(self::html:script)][html:script[@src][contains(@type, 'xml')]][count(*) = 1][normalize-space(text()) = '']">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
