@@ -70,6 +70,8 @@
   <xsl:param name="heading" select="0"/>
   <xsl:param name="debug" select="$xc:DEBUG"/>
 
+  <!--<xsl:message>root rewrites: <xsl:value-of select="$rewrite"/></xsl:message>-->
+
 <html>
   <xsl:apply-templates select="@*" mode="xc:attribute">
     <xsl:with-param name="base"          select="$base"/>
@@ -101,6 +103,8 @@
         <xsl:with-param name="base" select="$base"/>
       </xsl:call-template>
     </xsl:variable>
+
+    <!--<xsl:message>refs: <xsl:value-of select="count($references)"/></xsl:message>-->
 
     <xsl:variable name="resource">
       <xsl:choose>
@@ -664,6 +668,8 @@
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="''"/>
+
+  <!--<xsl:message>rewrite: <xsl:value-of select="$rewrite"/></xsl:message>-->
 
   <xsl:variable name="origin">
     <xsl:choose>
