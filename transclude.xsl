@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xsl:stylesheet version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:xml="http://www.w3.org/XML/1998/namespace"
     xmlns="http://www.w3.org/1999/xhtml"
     xmlns:html="http://www.w3.org/1999/xhtml"
     xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -656,6 +657,13 @@
       <xsl:with-param name="heading"       select="$heading"/>
     </xsl:apply-templates>
   </xsl:element>
+</xsl:template>
+
+<xsl:template match="@xml:*" mode="xc:attribute">
+  <!-- MSIE/MSXSL hates the explicit XML namespace and fails all over  -->
+  <xsl:attribute name="xml:{local-name()}">
+    <xsl:value-of select="."/>
+  </xsl:attribute>
 </xsl:template>
 
 <xsl:template match="@*" mode="xc:attribute">
