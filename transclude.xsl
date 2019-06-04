@@ -21,6 +21,7 @@
 <xsl:key name="xc:id" match="*[normalize-space(@id) != '']" use="normalize-space(@id)"/>
 <xsl:key name="xc:blocks" match="/*[namespace-uri() != 'http://www.w3.org/1999/xhtml']|html:body|html:main[not(@hidden)]|html:article[not(ancestor::html:main[@hidden])]" use="''"/>
 <xsl:key name="xc:references" match="html:*[@src][contains(translate(@type, 'XML',  'xml'), 'xml')]" use="''"/>
+<xsl:key name="xc:main" match="html:main[not(@hidden)]" use="''"/>
 
 <!-- these are cribbed from rdfa.xsl -->
 <xsl:variable name="xc:RECORD-SEP" select="'&#xf11e;'"/>
@@ -208,7 +209,7 @@
   </xsl:variable>
 
   <xsl:if test="$debug">
-    <xsl:message>processing script tag with transclude</xsl:message>
+    <xsl:message>processing script tag with transclude: <xsl:value-of select="$src"/> (<xsl:value-of select="$resource-path"/>)</xsl:message>
   </xsl:if>
 
   <xsl:choose>
@@ -303,15 +304,13 @@
             </xsl:element>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:if test="ancestor-or-self::*[html:head]/html:head/html:script">
-              <xsl:apply-templates select="ancestor-or-self::*[html:head]/html:head/html:script">
-                <xsl:with-param name="base"          select="$base"/>
-                <xsl:with-param name="resource-path" select="$resource-path"/>
-                <xsl:with-param name="rewrite"       select="$rewrite"/>
-                <xsl:with-param name="main"          select="$main"/>
-                <xsl:with-param name="heading"       select="$heading"/>
-              </xsl:apply-templates>
-            </xsl:if>
+            <xsl:apply-templates select="$to-transclude" mode="xc:head-js">
+              <xsl:with-param name="base"          select="$base"/>
+              <xsl:with-param name="resource-path" select="$resource-path"/>
+              <xsl:with-param name="rewrite"       select="$rewrite"/>
+              <xsl:with-param name="main"          select="$main"/>
+              <xsl:with-param name="heading"       select="$heading"/>
+            </xsl:apply-templates>
 
             <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
 
@@ -352,16 +351,14 @@
     </xsl:when>
     <xsl:otherwise>
       <!-- i dunno if this is smart or dumb-->
-      <xsl:if test="ancestor-or-self::*[html:head]/html:head/html:script">
-        <xsl:apply-templates select="ancestor-or-self::*[html:head]/html:head/html:script">
-          <xsl:with-param name="base"          select="$base"/>
-          <xsl:with-param name="resource-path" select="$resource-path"/>
-          <xsl:with-param name="rewrite"       select="$rewrite"/>
-          <xsl:with-param name="main"          select="$main"/>
-          <xsl:with-param name="heading"       select="$heading"/>
-        </xsl:apply-templates>
-      </xsl:if>
 
+      <xsl:apply-templates select="$to-transclude" mode="xc:head-js">
+        <xsl:with-param name="base"          select="$base"/>
+        <xsl:with-param name="resource-path" select="$resource-path"/>
+        <xsl:with-param name="rewrite"       select="$rewrite"/>
+        <xsl:with-param name="main"          select="$main"/>
+        <xsl:with-param name="heading"       select="$heading"/>
+      </xsl:apply-templates>
 
       <!-- this might need a wrapper element if there are multiple nodes -->
 
@@ -377,6 +374,22 @@
     </xsl:otherwise>
   </xsl:choose>
 
+</xsl:template>
+
+<xsl:template match="html:*" mode="xc:head-js">
+  <xsl:param name="base"/>
+  <xsl:param name="resource-path"/>
+  <xsl:param name="rewrite"/>
+  <xsl:param name="main"/>
+  <xsl:param name="heading"/>
+
+  <xsl:apply-templates select="ancestor-or-self::*[html:head]/html:head/html:script">
+    <xsl:with-param name="base"          select="$base"/>
+    <xsl:with-param name="resource-path" select="$resource-path"/>
+    <xsl:with-param name="rewrite"       select="$rewrite"/>
+    <xsl:with-param name="main"          select="$main"/>
+    <xsl:with-param name="heading"       select="$heading"/>
+  </xsl:apply-templates>
 </xsl:template>
 
 <!-- this exists so we can put logic in here -->
