@@ -796,10 +796,22 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="origin-authority">
+    <xsl:call-template name="uri:get-uri-authority">
+      <xsl:with-param name="uri" select="$origin"/>
+    </xsl:call-template>
+  </xsl:variable>
+
   <xsl:variable name="uri">
     <xsl:call-template name="uri:resolve-uri">
       <xsl:with-param name="uri" select="normalize-space(.)"/>
       <xsl:with-param name="base" select="$base"/>
+    </xsl:call-template>
+  </xsl:variable>
+
+  <xsl:variable name="href-authority">
+    <xsl:call-template name="uri:get-uri-authority">
+      <xsl:with-param name="uri" select="$uri"/>
     </xsl:call-template>
   </xsl:variable>
 
@@ -814,11 +826,23 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="href-fragment">
+    <xsl:choose>
+      <xsl:when test="$origin-authority = $href-authority and not($has-fragment)">
+        <xsl:variable name="d" select="document($uri)"/>
+        <xsl:value-of select="normalize-space(($d/html:html/html:body[1]/@id|$d/*/@id)[1])"/>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:variable>
+
   <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
     <xsl:variable name="match" select="contains(concat(' ', $rewrite, ' '), concat(' ', $document, ' '))"/>
     <xsl:choose>
       <xsl:when test="$has-fragment and $match">
         <xsl:value-of select="concat($origin, '#', $fragment)"/>
+      </xsl:when>
+      <xsl:when test="$href-fragment and $match">
+        <xsl:value-of select="concat($origin, '#', $href-fragment)"/>
       </xsl:when>
       <xsl:when test="$match"><xsl:value-of select="$origin"/></xsl:when>
       <xsl:otherwise><xsl:value-of select="$uri"/></xsl:otherwise>
