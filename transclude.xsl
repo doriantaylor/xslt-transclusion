@@ -826,9 +826,11 @@
     </xsl:choose>
   </xsl:variable>
 
+  <xsl:variable name="rewritten" select="contains(concat(' ', $rewrite, ' '), concat(' ', $document, ' '))"/>
+
   <xsl:variable name="href-fragment">
     <xsl:choose>
-      <xsl:when test="$origin-authority = $href-authority and not($has-fragment)">
+      <xsl:when test="$origin-authority = $href-authority and not($has-fragment) and $rewritten">
         <xsl:variable name="d" select="document($uri)"/>
         <xsl:value-of select="normalize-space(($d/html:html/html:body[1]/@id|$d/*/@id)[1])"/>
       </xsl:when>
