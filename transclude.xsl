@@ -173,7 +173,7 @@
 
 </xsl:template>
 
-<xsl:template match="html:head" mode="xc:get-head-scripts">
+<xsl:template match="html:head" mode="xc:get-head-scripts" name="xc:get-head-scripts">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite">
@@ -202,7 +202,7 @@
 
 </xsl:template>
 
-<xsl:template match="html:*" mode="xc:get-head-styles">
+<xsl:template match="html:*" mode="xc:get-head-styles" name="xc:get-head-styles">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite">
@@ -772,10 +772,16 @@
   </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@*" mode="xc:attribute">
+<xsl:template match="@*[namespace-uri()]" mode="xc:attribute">
+  <!--<xsl:message>found <xsl:value-of select="name()"/>, ns <xsl:value-of select="namespace-uri()"/></xsl:message>-->
   <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
     <xsl:value-of select="."/>
   </xsl:attribute>
+</xsl:template>
+
+<xsl:template match="@*[not(namespace-uri())]" mode="xc:attribute">
+  <!--<xsl:message>found <xsl:value-of select="name()"/></xsl:message>-->
+  <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
 </xsl:template>
 
 <xsl:template match="@href[not(parent::html:base)]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource" mode="xc:attribute" priority="2">
