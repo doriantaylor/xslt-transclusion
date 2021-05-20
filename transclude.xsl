@@ -20,7 +20,7 @@
 
 <xsl:key name="xc:id" match="*[normalize-space(@id) != '']" use="normalize-space(@id)"/>
 <xsl:key name="xc:blocks" match="/*[namespace-uri() != 'http://www.w3.org/1999/xhtml']|html:body|html:main[not(@hidden)]|html:article[not(ancestor::html:main[@hidden])]" use="''"/>
-<xsl:key name="xc:references" match="html:*[@src][contains(translate(@type, 'XML',  'xml'), 'xml')]" use="''"/>
+<xsl:key name="xc:references" match="html:*[@src|@data][contains(translate(@type, 'XML',  'xml'), 'xml')]" use="''"/>
 <xsl:key name="xc:main" match="html:main[not(@hidden)]" use="''"/>
 <xsl:key name="xc:head-script" match="html:head/html:script" use="''"/>
 <xsl:key name="xc:head-style"  match="html:head/html:style" use="''"/>
@@ -83,7 +83,9 @@
   <xsl:param name="heading" select="0"/>
   <xsl:param name="debug" select="$xc:DEBUG"/>
 
-  <!--<xsl:message>root rewrites: <xsl:value-of select="$rewrite"/></xsl:message>-->
+  <xsl:if test="$debug">
+    <xsl:message>root rewrites: <xsl:value-of select="$rewrite"/></xsl:message>
+  </xsl:if>
 
 <html>
   <xsl:apply-templates select="@*" mode="xc:attribute">
@@ -108,6 +110,9 @@
   <xsl:param name="result" select="''"/>
   <xsl:param name="debug" select="$xc:DEBUG"/>
   <!-- note the only way to do this in one template is to go depth first -->
+
+  <!--<xsl:message>refs: <xsl:value-of select="count($references)"/></xsl:message>-->
+
 <xsl:choose>
   <xsl:when test="count($references)">
     <!-- resolve the uri of the first reference -->
@@ -118,9 +123,7 @@
       </xsl:call-template>
     </xsl:variable>
 
-    <!--<xsl:message>refs: <xsl:value-of select="count($references)"/></xsl:message>-->
-
-    <xsl:variable name="resource">
+    <xsl:variable name="document">
       <xsl:choose>
         <xsl:when test="contains($src, '#')">
           <xsl:value-of select="substring-before($src, '#')"/>
@@ -135,9 +138,9 @@
          dereferenced document and capture its output -->
     <xsl:variable name="new-result">
       <xsl:variable name="_">
-        <xsl:if test="not(contains(concat(' ', $result, ' '), concat(' ', $resource, ' ')))">
-        <xsl:apply-templates select="document($resource)/*" mode="xc:get-rewrites">
-          <xsl:with-param name="result" select="concat($result, ' ', $resource)"/>
+        <xsl:if test="not(contains(concat(' ', $result, ' '), concat(' ', $document, ' ')) or contains(concat(' ', $result), concat(' ', $document, '#')))">
+        <xsl:apply-templates select="document($document)/*" mode="xc:get-rewrites">
+          <xsl:with-param name="result" select="concat($result, ' ', $src)"/>
         </xsl:apply-templates>
         </xsl:if>
       </xsl:variable>
@@ -145,8 +148,11 @@
         <xsl:when test="normalize-space($_)">
           <xsl:value-of select="$_"/>
         </xsl:when>
+        <xsl:when test="contains(concat(' ', $result, ' '), concat(' ', $src, ' '))">
+          <xsl:value-of select="normalize-space($result)"/>
+        </xsl:when>
         <xsl:otherwise>
-          <xsl:value-of select="normalize-space(concat($result, ' ', $resource))"/>
+          <xsl:value-of select="normalize-space(concat($result, ' ', $src))"/>
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
@@ -247,6 +253,10 @@
     </xsl:call-template>
   </xsl:variable>
 
+  <xsl:if test="$debug">
+    <xsl:message>script tag rewrites: <xsl:value-of select="$rewrite"/></xsl:message>
+  </xsl:if>
+
   <xsl:apply-templates select="." mode="xc:transclude-element">
     <xsl:with-param name="base"          select="$base"/>
     <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -257,12 +267,15 @@
   </xsl:apply-templates>
 </xsl:template>
 
+<!-- this one replaces an element like <script> or <object> -->
+
 <xsl:template match="html:*" mode="xc:transclude-element">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="''"/>
   <xsl:param name="main"    select="false()"/>
   <xsl:param name="heading" select="0"/>
+  <xsl:param name="plain"   select="false()"/>
   <xsl:param name="src">
     <xsl:message terminate="yes">must include $src</xsl:message>
   </xsl:param>
@@ -298,13 +311,16 @@
         <xsl:with-param name="rewrite"       select="$rewrite"/>
         <xsl:with-param name="main"          select="$main"/>
         <xsl:with-param name="heading"       select="$heading"/>
-        <xsl:with-param name="uri"    select="$src"/>
-        <xsl:with-param name="caller" select="."/>
+        <xsl:with-param name="plain"         select="$plain"/>
+        <xsl:with-param name="uri"           select="$src"/>
+        <xsl:with-param name="caller"        select="."/>
       </xsl:apply-templates>
     </xsl:otherwise>
   </xsl:choose>
 
 </xsl:template>
+
+<!-- this one operates on the actual target -->
 
 <xsl:template match="html:*" mode="xc:transclude">
   <!-- $base is a variable, not a param, to prevent accidental contamination -->
@@ -312,6 +328,7 @@
   <xsl:param name="rewrite"       select="''"/>
   <xsl:param name="main"          select="false()"/>
   <xsl:param name="heading"       select="0"/>
+  <xsl:param name="plain"         select="false()"/>
   <xsl:param name="uri" select="''"/>
   <xsl:param name="caller" select="/.."/>
 
@@ -390,7 +407,7 @@
 
             <xsl:variable name="title" select="/html:html/html:head/html:title[normalize-space(.) != '']"/>
 
-            <xsl:if test="$title and (local-name($parent) = 'section' or local-name($parent) = 'article') and string(number($heading)) != 'NaN'">
+            <xsl:if test="not($plain) and $title and (local-name($parent) = 'section' or local-name($parent) = 'article') and string(number($heading)) != 'NaN'">
               <xsl:text>
 </xsl:text>
 <xsl:element name="h{1 + $heading}" namespace="http://www.w3.org/1999/xhtml">
@@ -417,6 +434,7 @@
             </xsl:variable>
 
             <!-- this never needs a wrapper element; $parent suffices -->
+
             <xsl:apply-templates select="$to-transclude" mode="xc:transclude-shim">
               <xsl:with-param name="base"          select="$base"/>
               <xsl:with-param name="resource-path" select="$resource-path"/>
@@ -503,15 +521,20 @@
   <xsl:param name="heading"/>
   <xsl:param name="uri"/>
   <xsl:param name="caller"/>
+  <xsl:param name="debug" select="$xc:DEBUG"/>
 
   <xsl:variable name="fragment" select="substring-after($uri, '#')"/>
   <xsl:variable name="parent" select="$caller/parent::*"/>
+
+  <xsl:if test="$debug">
+    <xsl:message>parents = <xsl:value-of select="count($parent)"/></xsl:message>
+  </xsl:if>
 
   <xsl:choose>
     <xsl:when test="$fragment != '' and @id = $fragment">
       <!-- this node -->
       <xsl:apply-templates select=".">
-        <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="base"          select="$base"/>
         <xsl:with-param name="resource-path" select="$resource-path"/>
         <xsl:with-param name="rewrite"       select="$rewrite"/>
         <xsl:with-param name="main"          select="$main"/>
@@ -772,24 +795,29 @@
   </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@*[namespace-uri()]" mode="xc:attribute">
-  <!--<xsl:message>found <xsl:value-of select="name()"/>, ns <xsl:value-of select="namespace-uri()"/></xsl:message>-->
-  <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
+<xsl:template match="@*" mode="xc:attribute">
+  <!--<xsl:message>found <xsl:value-of select="name()"/></xsl:message>-->
+  <xsl:attribute name="{name()}">
     <xsl:value-of select="."/>
   </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@*[not(namespace-uri())]" mode="xc:attribute">
-  <!--<xsl:message>found <xsl:value-of select="name()"/></xsl:message>-->
-  <xsl:attribute name="{name()}"><xsl:value-of select="."/></xsl:attribute>
+<xsl:template match="@*[namespace-uri(.)]" mode="xc:attribute">
+  <!--<xsl:message>found <xsl:value-of select="name()"/>, ns <xsl:value-of select="namespace-uri()"/></xsl:message>-->
+  <xsl:attribute name="{name()}" namespace="{namespace-uri(.)}">
+    <xsl:value-of select="."/>
+  </xsl:attribute>
 </xsl:template>
 
-<xsl:template match="@href[not(parent::html:base)]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource" mode="xc:attribute" priority="2">
+<xsl:template match="@href[parent::html:*[not(self::html:base)]]|@src|@data|@action|@longdesc|@xlink:href|@rdf:about|@rdf:resource" mode="xc:attribute" priority="2">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
   <xsl:param name="resource-path" select="$base"/>
   <xsl:param name="rewrite" select="$resource-path"/>
+  <xsl:param name="debug" select="$xc:DEBUG"/>
 
-  <!--<xsl:message>rewrite: <xsl:value-of select="$rewrite"/></xsl:message>-->
+  <xsl:if test="$debug">
+    <xsl:message>href rewrites: <xsl:value-of select="$rewrite"/></xsl:message>
+  </xsl:if>
 
   <xsl:variable name="origin">
     <xsl:choose>
@@ -808,7 +836,7 @@
     </xsl:call-template>
   </xsl:variable>
 
-  <xsl:variable name="uri">
+  <xsl:variable name="href">
     <xsl:call-template name="uri:resolve-uri">
       <xsl:with-param name="uri" select="normalize-space(.)"/>
       <xsl:with-param name="base" select="$base"/>
@@ -817,18 +845,18 @@
 
   <xsl:variable name="href-authority">
     <xsl:call-template name="uri:get-uri-authority">
-      <xsl:with-param name="uri" select="$uri"/>
+      <xsl:with-param name="uri" select="$href"/>
     </xsl:call-template>
   </xsl:variable>
 
-  <xsl:variable name="has-fragment" select="contains($uri, '#')"/>
-  <xsl:variable name="fragment" select="substring-after($uri, '#')"/>
+  <xsl:variable name="has-fragment" select="contains($href, '#')"/>
+  <xsl:variable name="fragment" select="substring-after($href, '#')"/>
   <xsl:variable name="document">
     <xsl:choose>
       <xsl:when test="$has-fragment">
-        <xsl:value-of select="substring-before($uri, '#')"/>
+        <xsl:value-of select="substring-before($href, '#')"/>
       </xsl:when>
-      <xsl:otherwise><xsl:value-of select="$uri"/></xsl:otherwise>
+      <xsl:otherwise><xsl:value-of select="$href"/></xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
 
@@ -837,14 +865,14 @@
   <xsl:variable name="href-fragment">
     <xsl:choose>
       <xsl:when test="$origin-authority = $href-authority and not($has-fragment) and $rewritten">
-        <xsl:variable name="d" select="document($uri)"/>
+        <xsl:variable name="d" select="document($href)"/>
         <xsl:value-of select="normalize-space(($d/html:html/html:body[1]/@id|$d/*/@id)[1])"/>
       </xsl:when>
     </xsl:choose>
   </xsl:variable>
 
-  <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
-    <xsl:variable name="match" select="contains(concat(' ', $rewrite, ' '), concat(' ', $document, ' '))"/>
+  <xsl:variable name="href-text">
+    <xsl:variable name="match" select="contains(concat(' ', $rewrite, ' '), concat(' ', $href, ' '))"/>
     <xsl:choose>
       <xsl:when test="$has-fragment and $match">
         <xsl:value-of select="concat($origin, '#', $fragment)"/>
@@ -853,10 +881,46 @@
         <xsl:value-of select="concat($origin, '#', $href-fragment)"/>
       </xsl:when>
       <xsl:when test="$match"><xsl:value-of select="$origin"/></xsl:when>
-      <xsl:otherwise><xsl:value-of select="$uri"/></xsl:otherwise>
+      <xsl:otherwise><xsl:value-of select="$href"/></xsl:otherwise>
     </xsl:choose>
-  </xsl:attribute>
+  </xsl:variable>
 
+  <xsl:choose>
+    <xsl:when test="namespace-uri(.)">
+      <xsl:attribute name="{name()}" namespace="{namespace-uri()}">
+        <xsl:value-of select="$href-text"/>
+      </xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+      <xsl:attribute name="{local-name()}">
+        <xsl:value-of select="$href-text"/>
+      </xsl:attribute>
+    </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<xsl:template match="html:*">
+  <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
+  <xsl:param name="resource-path" select="$base"/>
+  <xsl:param name="rewrite"       select="''"/>
+  <xsl:param name="main"          select="false()"/>
+  <xsl:param name="heading"       select="0"/>
+
+  <xsl:element name="{name()}" namespace="http://www.w3.org/1999/xhtml">
+    <xsl:apply-templates select="@*" mode="xc:attribute">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+    </xsl:apply-templates>
+
+    <xsl:apply-templates>
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+      <xsl:with-param name="main"          select="$main"/>
+      <xsl:with-param name="heading"       select="$heading"/>
+    </xsl:apply-templates>
+  </xsl:element>
 </xsl:template>
 
 <!-- all non-html -->
