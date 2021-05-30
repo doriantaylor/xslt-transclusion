@@ -837,10 +837,17 @@
   </xsl:variable>
 
   <xsl:variable name="href">
-    <xsl:call-template name="uri:resolve-uri">
-      <xsl:with-param name="uri" select="normalize-space(.)"/>
-      <xsl:with-param name="base" select="$base"/>
-    </xsl:call-template>
+    <xsl:choose>
+      <xsl:when test="starts-with(normalize-space(.), '#')">
+        <xsl:value-of select="concat($base, normalize-space(.))"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="uri:resolve-uri">
+          <xsl:with-param name="uri" select="normalize-space(.)"/>
+          <xsl:with-param name="base" select="$base"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:variable>
 
   <xsl:variable name="href-authority">
