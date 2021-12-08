@@ -20,8 +20,9 @@
 
 <xsl:key name="xc:id" match="*[normalize-space(@id) != '']" use="normalize-space(@id)"/>
 <xsl:key name="xc:blocks" match="/*[namespace-uri() != 'http://www.w3.org/1999/xhtml']|html:body|html:main[not(@hidden)]|html:article[not(ancestor::html:main[@hidden])]" use="''"/>
+<xsl:key name="xc:article" match="html:article[ancestor::html:body][ancestor::html:main[not(@hidden)] or not(ancestor::html:main[@hidden])]" use="''"/>
+<xsl:key name="xc:main" match="html:main[ancestor::html:body][not(@hidden)]" use="''"/>
 <xsl:key name="xc:references" match="html:*[@src|@data][contains(translate(@type, 'XML',  'xml'), 'xml')]" use="''"/>
-<xsl:key name="xc:main" match="html:main[not(@hidden)]" use="''"/>
 <xsl:key name="xc:head-script" match="html:head/html:script" use="''"/>
 <xsl:key name="xc:head-style"  match="html:head/html:style" use="''"/>
 <xsl:key name="xc:head-link"   match="html:head/html:link" use="''"/>
@@ -875,13 +876,16 @@
         <xsl:variable name="d" select="document($href)"/>
         <xsl:value-of select="normalize-space(($d/html:html/html:body[1]/@id|$d/*/@id)[1])"/>
       </xsl:when>
+      <xsl:when test="$origin-authority = $href-authority">
+        <xsl:value-of select="$fragment"/>
+      </xsl:when>
     </xsl:choose>
   </xsl:variable>
 
   <xsl:variable name="href-text">
     <xsl:variable name="match" select="contains(concat(' ', $rewrite, ' '), concat(' ', $href, ' '))"/>
     <xsl:choose>
-      <xsl:when test="$has-fragment and $match">
+      <xsl:when test="$has-fragment and ($match or $rewritten)">
         <xsl:value-of select="concat($origin, '#', $fragment)"/>
       </xsl:when>
       <xsl:when test="$href-fragment and $match">
