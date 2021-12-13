@@ -122,7 +122,7 @@ placed directly under the transcluding element's parent.
   <script type="application/xhtml+xml" src="/content"/>
 </article>
 
-<!-- in transcluded document -->
+<!-- in transcluded document at /content -->
 <body>
   <p>lol hi i got transcluded</p>
   <p>isn't life grand?</p>
@@ -338,7 +338,7 @@ Bug reports and pull requests are welcome at
 
 ## Copyright & License
 
-©2018 [Dorian Taylor](https://doriantaylor.com/)
+©2018-2021 [Dorian Taylor](https://doriantaylor.com/)
 
 This software is provided under
 the [Apache License, 2.0](https://www.apache.org/licenses/LICENSE-2.0).
