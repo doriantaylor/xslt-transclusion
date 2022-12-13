@@ -11,7 +11,7 @@
     xmlns:xc="https://makethingsmakesense.com/asset/transclude#"
     exclude-result-prefixes="html str uri rdf xlink xc">
 
-<!-- 
+<!--
      Make sure you import xsltsl/uri.xsl and xsltsl/string.xsl before
      importing this.
 -->
@@ -74,6 +74,17 @@
 
 <xsl:template match="html:*" mode="xc:assert-base" name="xc:assert-base">
   <xsl:message terminate="yes">$base is a mandatory parameter: <xsl:value-of select="name(..)"/>/<xsl:value-of select="name()"/></xsl:message>
+</xsl:template>
+
+<xsl:template name="xc:get-origin">
+  <xsl:param name="resource-path"/>
+  <xsl:variable name="_" select="normalize-space($resource-path)"/>
+  <xsl:choose>
+    <xsl:when test="contains($_, ' ')">
+      <xsl:value-of select="substring-before($_, ' ')"/>
+    </xsl:when>
+    <xsl:otherwise><xsl:value-of select="$_"/></xsl:otherwise>
+  </xsl:choose>
 </xsl:template>
 
 <xsl:template match="html:html">
@@ -161,7 +172,7 @@
         </xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-    
+
     <!-- now we move to the next reference in this document-->
     <!-- this is just an optimization to keep from recursing unnecessarily -->
     <xsl:choose>
@@ -695,6 +706,14 @@
     </xsl:when>
     <xsl:otherwise>
       <!-- wrap either div or span -->
+      <xsl:apply-templates select="." mode="xc:wrap">
+          <xsl:with-param name="base"          select="$base"/>
+          <xsl:with-param name="resource-path" select="$resource-path"/>
+          <xsl:with-param name="rewrite"       select="$rewrite"/>
+          <xsl:with-param name="main"          select="$main"/>
+          <xsl:with-param name="heading"       select="$heading"/>
+          <xsl:with-param name="caller"        select="$caller"/>
+      </xsl:apply-templates>
       <xsl:variable name="element">
         <xsl:choose>
           <xsl:when test="document('')/xsl:stylesheet/xc:elements/xc:block[@name = local-name($parent)]">div</xsl:when>
@@ -712,6 +731,35 @@
       </xsl:element>
     </xsl:otherwise>
   </xsl:choose>
+</xsl:template>
+
+<xsl:template match="html:*" mode="xc:wrap">
+  <xsl:param name="base">
+    <xsl:apply-templates select="." mode="xc:assert-base"/>
+  </xsl:param>
+  <xsl:param name="resource-path" select="$base"/>
+  <xsl:param name="rewrite"       select="''"/>
+  <xsl:param name="main"          select="false()"/>
+  <xsl:param name="heading"       select="0"/>
+  <xsl:param name="caller"/>
+
+  <xsl:variable name="parent" select="$caller/parent::*"/>
+  <xsl:variable name="element">
+    <xsl:choose>
+      <xsl:when test="document('')/xsl:stylesheet/xc:elements/xc:block[@name = local-name($parent)]">div</xsl:when>
+      <xsl:otherwise>span</xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+
+  <xsl:element name="{$element}" namespace="http://www.w3.org/1999/xhtml">
+    <xsl:apply-templates select="*|text()">
+      <xsl:with-param name="base"          select="$base"/>
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+      <xsl:with-param name="rewrite"       select="$rewrite"/>
+      <xsl:with-param name="main"          select="$main"/>
+      <xsl:with-param name="heading"       select="$heading"/>
+    </xsl:apply-templates>
+  </xsl:element>
 </xsl:template>
 
 <xsl:template match="*" mode="xc:transclude">
@@ -830,6 +878,11 @@
 </xsl:template>
 
 <!-- fix h1 through h6 -->
+
+<!--
+    XXX COME BACK TO THIS AND FIGURE OUT IF IT IS USED ANYWHERE
+    (name= rather than mode=, ie it will always get called)
+-->
 
 <xsl:template match="html:h1|html:h2|html:h3|html:h4|html:h5|html:h6" name="xc:heading">
   <xsl:param name="base" select="normalize-space((ancestor-or-self::html:html[html:head/html:base[@href]][1]/html:head/html:base[@href])[1]/@href)"/>
@@ -953,20 +1006,14 @@
 
   <xsl:param name="href" select="."/>
 
-  <!--
   <xsl:if test="$debug">
     <xsl:message>xc:href base: <xsl:value-of select="$base"/>, rewrites: <xsl:value-of select="$rewrite"/></xsl:message>
-  </xsl:if>-->
+  </xsl:if>
 
   <xsl:variable name="origin">
-    <xsl:choose>
-      <xsl:when test="contains(normalize-space($resource-path), ' ')">
-        <xsl:value-of select="substring-before(normalize-space($resource-path), ' ')"/>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:value-of select="normalize-space($resource-path)"/>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:call-template name="xc:get-origin">
+      <xsl:with-param name="resource-path" select="$resource-path"/>
+    </xsl:call-template>
   </xsl:variable>
 
   <xsl:variable name="origin-authority">
