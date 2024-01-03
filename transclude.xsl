@@ -148,23 +148,32 @@
       </xsl:choose>
     </xsl:variable>
 
+    <xsl:variable name="fragment" select="substring-after($src, '#')"/>
+
     <!-- if the new uri is not present in the list then dereference it -->
 
     <!-- run this template recursively over the root of the
          dereferenced document and capture its output -->
     <xsl:variable name="new-result">
+      <xsl:variable name="r" select="concat(' ', $result, ' ')"/>
       <xsl:variable name="_">
-        <xsl:if test="not(contains(concat(' ', $result, ' '), concat(' ', $document, ' ')) or contains(concat(' ', $result), concat(' ', $document, '#')))">
-        <xsl:apply-templates select="document($document)/*" mode="xc:get-rewrites">
-          <xsl:with-param name="result" select="concat($result, ' ', $src)"/>
-        </xsl:apply-templates>
+        <xsl:if test="not(contains($r, concat(' ', $document, ' ')) or contains($r, concat(' ', $document, '#')))">
+          <xsl:apply-templates select="document($document)/*" mode="xc:get-rewrites">
+            <xsl:with-param name="base" select="$src"/>
+            <xsl:with-param name="result" select="concat($result, ' ', $src)"/>
+          </xsl:apply-templates>
         </xsl:if>
       </xsl:variable>
+
+      <xsl:if test="$debug">
+        <xsl:message>sub-document <xsl:value-of select="$src"/> rewrite result: <xsl:value-of select="$_"/></xsl:message>
+      </xsl:if>
+
       <xsl:choose>
         <xsl:when test="normalize-space($_)">
           <xsl:value-of select="$_"/>
         </xsl:when>
-        <xsl:when test="contains(concat(' ', $result, ' '), concat(' ', $src, ' '))">
+        <xsl:when test="contains($r, concat(' ', $src, ' ')) or contains($r, concat($document, '#'))">
           <xsl:value-of select="normalize-space($result)"/>
         </xsl:when>
         <xsl:otherwise>
@@ -188,11 +197,8 @@
       </xsl:otherwise>
     </xsl:choose>
   </xsl:when>
-  <xsl:otherwise>
-    <xsl:value-of select="$result"/>
-  </xsl:otherwise>
+  <xsl:otherwise><xsl:value-of select="$result"/></xsl:otherwise>
   </xsl:choose>
-
 </xsl:template>
 
 <xsl:template match="html:head" mode="xc:get-head-scripts" name="xc:get-head-scripts">
@@ -1006,15 +1012,15 @@
 
   <xsl:param name="href" select="."/>
 
-  <xsl:if test="$debug">
-    <xsl:message>xc:href base: <xsl:value-of select="$base"/>, rewrites: <xsl:value-of select="$rewrite"/></xsl:message>
-  </xsl:if>
-
   <xsl:variable name="origin">
     <xsl:call-template name="xc:get-origin">
       <xsl:with-param name="resource-path" select="$resource-path"/>
     </xsl:call-template>
   </xsl:variable>
+
+  <xsl:if test="$debug">
+    <xsl:message>xc:href base: <xsl:value-of select="$base"/>, rewrites: <xsl:value-of select="$rewrite"/>, origin: <xsl:value-of select="$origin"/></xsl:message>
+  </xsl:if>
 
   <xsl:variable name="origin-authority">
     <xsl:call-template name="uri:get-uri-authority">
@@ -1067,7 +1073,6 @@
     </xsl:choose>
   </xsl:variable>
 
-
   <xsl:variable name="match" select="contains(concat(' ', $rewrite, ' '), concat(' ', $href-abs, ' '))"/>
   <xsl:variable name="out">
   <xsl:choose>
@@ -1095,7 +1100,7 @@
   <xsl:param name="rewrite" select="$resource-path"/>
   <xsl:param name="debug" select="$xc:DEBUG"/>
 
-  <xsl:message>lol</xsl:message>
+  <!--<xsl:message>lol</xsl:message>-->
 
   <xsl:variable name="href-text">
     <xsl:apply-templates select="." mode="xc:href">
